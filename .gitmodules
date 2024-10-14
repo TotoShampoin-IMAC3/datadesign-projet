@@ -1,0 +1,3 @@
+[submodule "laion2B-en-aesthetic-minified"]
+	path = laion2B-en-aesthetic-minified
+	url = https://github.com/robillardstudio/laion2B-en-aesthetic-minified
