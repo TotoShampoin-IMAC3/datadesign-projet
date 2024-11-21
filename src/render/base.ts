@@ -22,3 +22,5 @@ export function setDomElement(element: HTMLElement) {
     domElement = element;
     updateRendererToDom();
 }
+
+export { THREE };
