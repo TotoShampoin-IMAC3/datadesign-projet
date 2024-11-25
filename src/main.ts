@@ -8,7 +8,7 @@ import {
 } from "./render/base";
 import { setDomElement as setHudDomElement, setText } from "./hud/base";
 import { newQuad, Quad } from "./render/quad";
-import { delay } from "./utils";
+import { delay, fetchJson } from "./utils";
 
 // ===== Renderer initialization
 const $app = document.getElementById("app")!;
@@ -20,7 +20,18 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.1;
 camera.position.z = 20;
 
-const NB_QUADS = 1000;
+// const NB_QUADS = 1000;
+const data = await fetchJson<
+    {
+        name: string;
+        width: number;
+        height: number;
+        h: number;
+        s: number;
+        v: number;
+    }[]
+>("/data.json");
+const NB_QUADS = data.length;
 
 // ===== Crude loading progress
 let counter = 0;
@@ -32,22 +43,24 @@ function updateLoadingText() {
     }
 }
 
-// ===== Quads loading
 const quads: Quad[] = [];
-for (let i = 0; i < NB_QUADS; i++) {
-    newQuad(`/dataset/images/image_${i}.jpg`, 1 / 2000) //
+
+// ===== Quads loading
+// for (let i = 0; i < NB_QUADS; i++) {
+//     newQuad(`/dataset/images/image_${i}.jpg`, 1 / 2000) //
+for (const { name, width, height, h, s, v } of data) {
+    newQuad(`/parsed/${name}`, 1 / 2000, { width, height }) //
         .then(async (data) => {
             // If the image is not found, we reduce the counter
             if (data === null) {
-                maxCounter--;
-                return;
+                throw new Error("Image not found");
             }
             counter++;
             updateLoadingText();
             data.quad.position.set(
-                Math.random() * 10 - 5,
-                Math.random() * 10 - 5,
-                Math.random() * 10 - 5,
+                Math.cos(h * Math.PI * 2) * s * 20,
+                (v * 2 - 1) * 15,
+                Math.sin(h * Math.PI * 2) * s * 20,
             );
             quads.push(data);
 
@@ -67,7 +80,7 @@ async function texturesLoaded() {
     for (let i = 0; i < quads.length; i++) {
         const { quad } = quads[i];
         scene.add(quad);
-        if (i % 10 === 0) await delay(0);
+        // if (i % 10 === 0) await delay(0);
     }
 }
 
