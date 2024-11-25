@@ -5,57 +5,63 @@ import {
     camera,
     renderer,
     controls,
-    THREE,
 } from "./render/base";
 import { setDomElement as setHudDomElement, setText } from "./hud/base";
 import { newQuad, Quad } from "./render/quad";
-import { delat as delay } from "./utils";
+import { delay } from "./utils";
 
+// ===== Renderer initialization
 const $app = document.getElementById("app")!;
 setRenderDomElement($app);
-controls.enableDamping = true;
-controls.dampingFactor = 0.1;
-
 setHudDomElement($app);
 
-// I would download the 10000, but they need to be shrunk first, to reduce RAM usage
-const COUNT = 1000;
+// ===== Camera and controls initialization
+controls.enableDamping = true;
+controls.dampingFactor = 0.1;
+camera.position.z = 20;
 
+const NB_QUADS = 1000;
+
+// ===== Crude loading progress
 let counter = 0;
-let maxCounter = COUNT;
+let maxCounter = NB_QUADS;
 function updateLoadingText() {
-    counter++;
     setText(`Loading: ${counter}/${maxCounter}`);
+    if (counter === maxCounter) {
+        setText(`Loading: ${counter}/${maxCounter} - Done`);
+    }
 }
 
-const quads: {
-    quad: Quad;
-    width: number;
-    height: number;
-}[] = [];
-for (let i = 0; i < COUNT; i++) {
-    newQuad(`/dataset/images/image_${i}.jpg`, 1 / 2000).then(async (data) => {
-        if (data === null) {
-            maxCounter--;
-            return;
-        }
-        updateLoadingText();
-        data.quad.position.set(
-            Math.random() * 10 - 5,
-            Math.random() * 10 - 5,
-            Math.random() * 10 - 5,
-        );
-        // scene.add(quad);
-        quads.push(data);
+// ===== Quads loading
+const quads: Quad[] = [];
+for (let i = 0; i < NB_QUADS; i++) {
+    newQuad(`/dataset/images/image_${i}.jpg`, 1 / 2000) //
+        .then(async (data) => {
+            // If the image is not found, we reduce the counter
+            if (data === null) {
+                maxCounter--;
+                return;
+            }
+            counter++;
+            updateLoadingText();
+            data.quad.position.set(
+                Math.random() * 10 - 5,
+                Math.random() * 10 - 5,
+                Math.random() * 10 - 5,
+            );
+            quads.push(data);
 
-        if (counter === maxCounter) {
-            texturesLoaded();
-        }
-    });
+            if (counter === maxCounter) {
+                texturesLoaded();
+            }
+        });
 }
+
+// Once all quads are loaded, we add them to the scene
+// We sort them from biggest to smallest in batches (delay(0) slows down the loop)
+// to avoid lags during loading time
 async function texturesLoaded() {
     quads.sort((a, b) => {
-        // return a.width * a.height - b.width * b.height;
         return b.width * b.height - a.width * a.height;
     });
     for (let i = 0; i < quads.length; i++) {
@@ -65,10 +71,7 @@ async function texturesLoaded() {
     }
 }
 
-console.log(`Quads created: ${quads.length}`);
-
-camera.position.z = 20;
-
+// ===== Rendering loop
 renderer.setAnimationLoop(() => {
     quads.forEach((data) => {
         data.quad.quaternion.copy(camera.quaternion);

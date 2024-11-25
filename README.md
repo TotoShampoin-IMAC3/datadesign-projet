@@ -26,3 +26,6 @@ npm run dev
 ```
 
 Et il sera hébergé sur [http://localhost:5173/](http://localhost:5173/).
+
+Une recommendation:  
+Si le compteur reste bloqué à x/1000, ouvrez l'inspecteur (F12), allez dans l'onglet "Network" ("Réseau"), et cochez "Disable cache" ("Désactiver le cache").
