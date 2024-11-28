@@ -5,10 +5,15 @@ import {
     camera,
     renderer,
     controls,
+    THREE,
 } from "./render/base";
 import { setDomElement as setHudDomElement, setText } from "./hud/base";
 import { newQuad, Quad } from "./render/quad";
 import { delay, fetchJson } from "./utils";
+
+function lerp(a: number, b: number, t: number) {
+    return a * (1 - t) + b * t;
+}
 
 // ===== Renderer initialization
 const $app = document.getElementById("app")!;
@@ -26,11 +31,15 @@ const data = await fetchJson<
         name: string;
         width: number;
         height: number;
-        h: number;
-        s: number;
-        v: number;
+        h_mean: number;
+        s_mean: number;
+        v_mean: number;
+        h_max: number;
+        s_max: number;
+        v_max: number;
     }[]
 >("/data.json");
+
 const NB_QUADS = data.length;
 
 // ===== Crude loading progress
@@ -43,12 +52,14 @@ function updateLoadingText() {
     }
 }
 
-const quads: Quad[] = [];
+const quads: { data: Quad; hsv_mean: number[]; hsv_max: number[] }[] = [];
 
 // ===== Quads loading
 // for (let i = 0; i < NB_QUADS; i++) {
 //     newQuad(`/dataset/images/image_${i}.jpg`, 1 / 2000) //
-for (const { name, width, height, h, s, v } of data) {
+for (const d of data) {
+    const { name, width, height } = d;
+    const { h_max, s_max, v_max, h_mean, s_mean, v_mean } = d;
     newQuad(`/parsed/${name}`, 1 / 2000, { width, height }) //
         .then(async (data) => {
             // If the image is not found, we reduce the counter
@@ -57,12 +68,11 @@ for (const { name, width, height, h, s, v } of data) {
             }
             counter++;
             updateLoadingText();
-            data.quad.position.set(
-                Math.cos(h * Math.PI * 2) * s * 20,
-                (v * 2 - 1) * 15,
-                Math.sin(h * Math.PI * 2) * s * 20,
-            );
-            quads.push(data);
+            quads.push({
+                data: data,
+                hsv_max: [h_max, s_max, v_max],
+                hsv_mean: [h_mean, s_mean, v_mean],
+            });
 
             if (counter === maxCounter) {
                 texturesLoaded();
@@ -75,21 +85,47 @@ for (const { name, width, height, h, s, v } of data) {
 // to avoid lags during loading time
 async function texturesLoaded() {
     quads.sort((a, b) => {
-        return b.width * b.height - a.width * a.height;
+        return b.data.width * b.data.height - a.data.width * a.data.height;
     });
     for (let i = 0; i < quads.length; i++) {
-        const { quad } = quads[i];
-        scene.add(quad);
+        const { data: quad } = quads[i];
+        scene.add(quad.quad);
         // if (i % 10 === 0) await delay(0);
     }
 }
 
+(window as any).lerpTimer = 1;
+(window as any).lerpFrom = 0;
+(window as any).lerpTo = 1;
+
+let lastTime = 0;
 // ===== Rendering loop
-renderer.setAnimationLoop(() => {
+renderer.setAnimationLoop((time) => {
+    const deltaTime = time - lastTime;
+
     quads.forEach((data) => {
-        data.quad.quaternion.copy(camera.quaternion);
+        const { hsv_mean, hsv_max, data: quad } = data;
+        const t = lerp(
+            (window as any).lerpFrom,
+            (window as any).lerpTo,
+            (window as any).lerpTimer,
+        );
+        const h = lerp(hsv_mean[0], hsv_max[0], t);
+        const s = lerp(hsv_mean[1], hsv_max[1], t);
+        const v = lerp(hsv_mean[2], hsv_max[2], t);
+        quad.quad.position.set(
+            Math.cos(h * Math.PI * 2) * s * 20,
+            (v * 2 - 1) * 20,
+            Math.sin(h * Math.PI * 2) * s * 20,
+        );
+        quad.quad.quaternion.copy(camera.quaternion);
     });
 
     renderer.render(scene, camera);
     controls.update();
+
+    if ((window as any).lerpTimer > 0)
+        (window as any).lerpTimer -= deltaTime / 1000;
+
+    lastTime = time;
 });
