@@ -7,9 +7,14 @@ import {
     controls,
     THREE,
 } from "./render/base";
-import { setDomElement as setHudDomElement, setText } from "./hud/base";
+import {
+    setDomElement as setHudDomElement,
+    setLoading,
+    onModeChange,
+} from "./hud/base";
 import { newQuad, Quad } from "./render/quad";
-import { delay, fetchJson } from "./utils";
+import { delay, fetchJson, hsvToHsl } from "./utils";
+import BezierEasing from "bezier-easing";
 
 function lerp(a: number, b: number, t: number) {
     return a * (1 - t) + b * t;
@@ -23,7 +28,7 @@ setHudDomElement($app);
 // ===== Camera and controls initialization
 controls.enableDamping = true;
 controls.dampingFactor = 0.1;
-camera.position.z = 20;
+camera.position.z = 50;
 
 // const NB_QUADS = 1000;
 const data = await fetchJson<
@@ -41,26 +46,29 @@ const data = await fetchJson<
 >("/data.json");
 
 const NB_QUADS = data.length;
+// const NB_QUADS = 1000;
 
 // ===== Crude loading progress
 let counter = 0;
 let maxCounter = NB_QUADS;
 function updateLoadingText() {
-    setText(`Loading: ${counter}/${maxCounter}`);
-    if (counter === maxCounter) {
-        setText(`Loading: ${counter}/${maxCounter} - Done`);
-    }
+    setLoading((counter / maxCounter) * 100, `${counter}/${maxCounter}`);
 }
 
 const quads: { data: Quad; hsv_mean: number[]; hsv_max: number[] }[] = [];
 
 // ===== Quads loading
-// for (let i = 0; i < NB_QUADS; i++) {
-//     newQuad(`/dataset/images/image_${i}.jpg`, 1 / 2000) //
+let i = 0;
 for (const d of data) {
     const { name, width, height } = d;
     const { h_max, s_max, v_max, h_mean, s_mean, v_mean } = d;
-    newQuad(`/parsed/${name}`, 1 / 2000, { width, height }) //
+
+    // This is a trick to avoid caching the images
+    // because for some reason, cached images crash the website
+    const random = `${Math.floor(Math.random() * 10 ** 16)}`;
+    const url = `/parsed/${name}?anti-cache=${random}`;
+
+    newQuad(url, 1 / 2000, { width, height }) //
         .then(async (data) => {
             // If the image is not found, we reduce the counter
             if (data === null) {
@@ -74,29 +82,23 @@ for (const d of data) {
                 hsv_mean: [h_mean, s_mean, v_mean],
             });
 
-            if (counter === maxCounter) {
-                texturesLoaded();
-            }
+            scene.add(data.quad);
         });
 }
 
-// Once all quads are loaded, we add them to the scene
-// We sort them from biggest to smallest in batches (delay(0) slows down the loop)
-// to avoid lags during loading time
-async function texturesLoaded() {
-    quads.sort((a, b) => {
-        return b.data.width * b.data.height - a.data.width * a.data.height;
-    });
-    for (let i = 0; i < quads.length; i++) {
-        const { data: quad } = quads[i];
-        scene.add(quad.quad);
-        // if (i % 10 === 0) await delay(0);
-    }
-}
+type Mode = "images-mean" | "images-max" | "cloud-mean" | "cloud-max";
 
-(window as any).lerpTimer = 1;
-(window as any).lerpFrom = 0;
-(window as any).lerpTo = 1;
+let lerpTimer = 0;
+let modeFrom = "images-max" as Mode;
+let modeTo = "images-mean" as Mode;
+
+onModeChange<Mode>((mode) => {
+    lerpTimer = 1;
+    modeFrom = modeTo;
+    modeTo = mode;
+});
+
+const easing = BezierEasing(0.5, 0, 0.5, 1);
 
 let lastTime = 0;
 // ===== Rendering loop
@@ -105,27 +107,49 @@ renderer.setAnimationLoop((time) => {
 
     quads.forEach((data) => {
         const { hsv_mean, hsv_max, data: quad } = data;
-        const t = lerp(
-            (window as any).lerpFrom,
-            (window as any).lerpTo,
-            (window as any).lerpTimer,
-        );
-        const h = lerp(hsv_mean[0], hsv_max[0], t);
-        const s = lerp(hsv_mean[1], hsv_max[1], t);
-        const v = lerp(hsv_mean[2], hsv_max[2], t);
+
+        const hFrom = modeFrom.includes("mean") ? hsv_max[0] : hsv_mean[0];
+        const sFrom = modeFrom.includes("mean") ? hsv_max[1] : hsv_mean[1];
+        const vFrom = modeFrom.includes("mean") ? hsv_max[2] : hsv_mean[2];
+        const rFrom = modeFrom.includes("mean") ? 20 : 40;
+        const hTo = modeTo.includes("mean") ? hsv_max[0] : hsv_mean[0];
+        const sTo = modeTo.includes("mean") ? hsv_max[1] : hsv_mean[1];
+        const vTo = modeTo.includes("mean") ? hsv_max[2] : hsv_mean[2];
+        const rTo = modeTo.includes("mean") ? 20 : 40;
+
+        // const t = lerp(0, 1, lerpTimer);
+        // const t = smoothstep(0, 1, lerpTimer);
+        const t = easing(lerpTimer);
+        const h = lerp(hFrom, hTo, t);
+        const s = lerp(sFrom, sTo, t);
+        const v = lerp(vFrom, vTo, t); // ** (1 / 2.2);
+        const r = lerp(rFrom, rTo, t);
+
         quad.quad.position.set(
-            Math.cos(h * Math.PI * 2) * s * 20,
-            (v * 2 - 1) * 20,
-            Math.sin(h * Math.PI * 2) * s * 20,
+            Math.cos(h * Math.PI * 2) * s * r,
+            (v * 2 - 1) * r,
+            Math.sin(h * Math.PI * 2) * s * r,
         );
         quad.quad.quaternion.copy(camera.quaternion);
     });
 
-    renderer.render(scene, camera);
     controls.update();
 
-    if ((window as any).lerpTimer > 0)
-        (window as any).lerpTimer -= deltaTime / 1000;
+    const pos = camera.position.clone().normalize();
+    const [x, y, z] = pos.toArray();
+    const hsv = [(Math.atan2(z, x) / Math.PI / 2 + 1) % 1, (y + 1) / 2, 0.2];
+    let hsl = hsvToHsl(hsv[0], hsv[1], hsv[2]);
+
+    renderer.setClearColor(
+        new THREE.Color(
+            `hsl(${hsl[0] * 360}, ${hsl[1] * 100}%, ${hsl[2] * 100}%)`,
+        ),
+    );
+
+    renderer.render(scene, camera);
+
+    if (lerpTimer - deltaTime / 1000 > 0) lerpTimer -= deltaTime / 1000;
+    else lerpTimer = 0;
 
     lastTime = time;
 });
