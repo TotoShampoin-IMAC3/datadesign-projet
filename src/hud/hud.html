@@ -1,26 +1,26 @@
 <div class="hud">
-    <div class="loading">
-        <span id="loading-text"></span>
-        <progress id="loading" max="100" value="0"></progress>
-    </div>
-    <div class="mode-selection">
-        <label>
-            <input type="radio" name="mode" value="mean" checked>
-            <span>Mean</span>
-        </label>
-        <label>
-            <input type="radio" name="mode" value="max">
-            <span>Tendency</span>
-        </label>
-    </div>
     <div class="mode-selection">
         <label>
             <input type="radio" name="disp" value="images" checked>
             <span>Images</span>
         </label>
         <label>
-            <input type="radio" name="disp" value="cloud" disabled>
-            <span>Points</span>
+            <input type="radio" name="disp" value="cloud">
+            <span>Nuage de points</span>
         </label>
+    </div>
+    <div class="mode-selection">
+        <label>
+            <input type="radio" name="mode" value="mean" checked>
+            <span>Par moyenne</span>
+        </label>
+        <label>
+            <input type="radio" name="mode" value="max">
+            <span>Par majorité</span>
+        </label>
+    </div>
+    <div class="mode-selection">
+        <button id="top">Teinte - saturation</button>
+        <button id="side">Luminance</button>
     </div>
 </div>

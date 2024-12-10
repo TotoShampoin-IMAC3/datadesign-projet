@@ -11,6 +11,9 @@ import {
     setDomElement as setHudDomElement,
     setLoading,
     onModeChange,
+    onDispChange,
+    hideLoading,
+    setExplain,
 } from "./hud/base";
 import { newQuad, Quad } from "./render/quad";
 import { delay, fetchJson, hsvToHsl } from "./utils";
@@ -29,6 +32,8 @@ setHudDomElement($app);
 controls.enableDamping = true;
 controls.dampingFactor = 0.1;
 camera.position.z = 50;
+camera.layers.enable(0);
+camera.layers.disable(1);
 
 // const NB_QUADS = 1000;
 const data = await fetchJson<
@@ -53,6 +58,9 @@ let counter = 0;
 let maxCounter = NB_QUADS;
 function updateLoadingText() {
     setLoading((counter / maxCounter) * 100, `${counter}/${maxCounter}`);
+    if (counter === maxCounter) {
+        hideLoading();
+    }
 }
 
 const quads: { data: Quad; hsv_mean: number[]; hsv_max: number[] }[] = [];
@@ -82,20 +90,33 @@ for (const d of data) {
                 hsv_mean: [h_mean, s_mean, v_mean],
             });
 
-            scene.add(data.quad);
+            data.meshes.quad.layers.enable(0);
+            data.meshes.quad.layers.disable(1);
+
+            data.meshes.point.layers.enable(1);
+            data.meshes.point.layers.disable(0);
+
+            scene.add(data.meshes.quad);
+            scene.add(data.meshes.point);
         });
 }
 
-type Mode = "images-mean" | "images-max" | "cloud-mean" | "cloud-max";
+type Mode = "mean" | "max";
+type Disp = "images" | "cloud";
 
 let lerpTimer = 0;
-let modeFrom = "images-max" as Mode;
-let modeTo = "images-mean" as Mode;
+let modeFrom = "max" as Mode;
+let modeTo = "mean" as Mode;
+let currentDisp = "images" as Disp;
 
 onModeChange<Mode>((mode) => {
     lerpTimer = 1;
     modeFrom = modeTo;
     modeTo = mode;
+});
+onDispChange<Disp>((disp) => {
+    currentDisp = disp;
+    setExplain(disp);
 });
 
 const easing = BezierEasing(0.5, 0, 0.5, 1);
@@ -105,32 +126,50 @@ let lastTime = 0;
 renderer.setAnimationLoop((time) => {
     const deltaTime = time - lastTime;
 
+    switch (currentDisp) {
+        case "images":
+            camera.layers.enable(0);
+            camera.layers.disable(1);
+            break;
+        case "cloud":
+            camera.layers.enable(1);
+            camera.layers.disable(0);
+            break;
+    }
+
     quads.forEach((data) => {
         const { hsv_mean, hsv_max, data: quad } = data;
 
-        const hFrom = modeFrom.includes("mean") ? hsv_max[0] : hsv_mean[0];
-        const sFrom = modeFrom.includes("mean") ? hsv_max[1] : hsv_mean[1];
-        const vFrom = modeFrom.includes("mean") ? hsv_max[2] : hsv_mean[2];
-        const rFrom = modeFrom.includes("mean") ? 20 : 40;
-        const hTo = modeTo.includes("mean") ? hsv_max[0] : hsv_mean[0];
-        const sTo = modeTo.includes("mean") ? hsv_max[1] : hsv_mean[1];
-        const vTo = modeTo.includes("mean") ? hsv_max[2] : hsv_mean[2];
-        const rTo = modeTo.includes("mean") ? 20 : 40;
+        const hFrom = modeFrom === "mean" ? hsv_max[0] : hsv_mean[0];
+        const sFrom = modeFrom === "mean" ? hsv_max[1] : hsv_mean[1];
+        const vFrom = modeFrom === "mean" ? hsv_max[2] : hsv_mean[2];
+        const rFrom = modeFrom === "mean" ? 20 : 30;
+        const hTo = modeTo === "mean" ? hsv_max[0] : hsv_mean[0];
+        const sTo = modeTo === "mean" ? hsv_max[1] : hsv_mean[1];
+        const vTo = modeTo === "mean" ? hsv_max[2] : hsv_mean[2];
+        const rTo = modeTo === "mean" ? 20 : 30;
 
         // const t = lerp(0, 1, lerpTimer);
         // const t = smoothstep(0, 1, lerpTimer);
         const t = easing(lerpTimer);
         const h = lerp(hFrom, hTo, t);
         const s = lerp(sFrom, sTo, t);
-        const v = lerp(vFrom, vTo, t); // ** (1 / 2.2);
+        const v = lerp(vFrom, vTo, t);
+        // const v = lerp(vFrom, vTo, t) ** (1 / 2.2);
         const r = lerp(rFrom, rTo, t);
 
-        quad.quad.position.set(
+        const position = new THREE.Vector3(
             Math.cos(h * Math.PI * 2) * s * r,
             (v * 2 - 1) * r,
             Math.sin(h * Math.PI * 2) * s * r,
         );
-        quad.quad.quaternion.copy(camera.quaternion);
+
+        quad.meshes.quad.position.copy(position);
+        quad.meshes.quad.quaternion.copy(camera.quaternion);
+
+        quad.meshes.point.position.copy(position);
+        quad.meshes.point.quaternion.copy(camera.quaternion);
+        quad.meshes.point.material.color.setHSL(h, s, v);
     });
 
     controls.update();

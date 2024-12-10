@@ -1,5 +1,7 @@
 import titleHtml from "./title.html?raw";
 import hudHtml from "./hud.html?raw";
+import legendHtml from "./legend.html?raw";
+import explainHtml from "./explain.html?raw";
 
 const $title = document.createElement("div");
 $title.innerHTML = titleHtml;
@@ -7,8 +9,18 @@ $title.innerHTML = titleHtml;
 const $hud = document.createElement("div");
 $hud.innerHTML = hudHtml;
 
-const $loading = $hud.querySelector("#loading") as HTMLProgressElement;
-const $loadingText = $hud.querySelector("#loading-text") as HTMLSpanElement;
+const $legend = document.createElement("div");
+$legend.innerHTML = legendHtml;
+
+const $explain = document.createElement("div");
+$explain.innerHTML = explainHtml;
+const $explainDiv = $explain.children[0] as HTMLDivElement;
+
+const $loadingBox = $legend.querySelector("#loading-box") as HTMLDivElement;
+const $loadingBar = $legend.querySelector(
+    "#loading-bar",
+) as HTMLProgressElement;
+const $loadingText = $legend.querySelector("#loading-text") as HTMLSpanElement;
 const $mode = $hud.querySelectorAll(
     "input[name=mode]",
 ) as NodeListOf<HTMLInputElement>;
@@ -36,10 +48,35 @@ export function setLoading(
     text: string = `${value.toFixed(1)}%`,
 ) {
     $loadingText.innerText = text;
-    $loading.value = value;
+    $loadingBar.value = value;
+}
+export function hideLoading() {
+    $loadingBox.classList.add("hidden");
+}
+
+type ExplainMode = "images" | "cloud";
+export function setExplain(mode: ExplainMode) {
+    $explainDiv.dataset.mode = mode;
 }
 
 export function setDomElement(element: HTMLElement) {
     element.appendChild($title.children[0]);
     element.appendChild($hud.children[0]);
+    element.appendChild($legend.children[0]);
+    element.appendChild($explain.children[0]);
+
+    const $toggle = document.querySelectorAll(
+        ".toggle",
+    ) as NodeListOf<HTMLButtonElement>;
+    $toggle.forEach((button) => {
+        button.addEventListener("click", () => {
+            const targetSelector = button.dataset.for;
+            const target = document.querySelector(
+                `[data-target=${targetSelector}]`,
+            );
+            if (target) {
+                target.classList.toggle("hidden");
+            }
+        });
+    });
 }
