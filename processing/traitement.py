@@ -12,7 +12,7 @@ class Image:
     height: int
     mean_hsv: tuple[float, float, float]
     max_hsv: tuple[float, float, float]
-    gauss_hsv: tuple[float, float, float]
+    # gauss_hsv: tuple[float, float, float]
 
     def toDict(self):
         return {
@@ -25,9 +25,9 @@ class Image:
             'h_max': self.max_hsv[0],
             's_max': self.max_hsv[1],
             'v_max': self.max_hsv[2],
-            'h_gauss': self.gauss_hsv[0],
-            's_gauss': self.gauss_hsv[1],
-            'v_gauss': self.gauss_hsv[2],
+            # 'h_gauss': self.gauss_hsv[0],
+            # 's_gauss': self.gauss_hsv[1],
+            # 'v_gauss': self.gauss_hsv[2],
         }
 
 def parse_args():
@@ -134,8 +134,8 @@ def load_and_reduce_image(in_path, out_path):
     pygame.image.save(image, out_path)
 
     name = out_path.split('/')[-1]
-    return Image(name=name, width=width, height=height, mean_hsv=(0,0,0), max_hsv=(0,0,0), gauss_hsv=(0,0,0)), image
-    # return Image(name=name, width=width, height=height, mean_hsv=(0,0,0), max_hsv=(0,0,0)), image
+    # return Image(name=name, width=width, height=height, mean_hsv=(0,0,0), max_hsv=(0,0,0), gauss_hsv=(0,0,0)), image
+    return Image(name=name, width=width, height=height, mean_hsv=(0,0,0), max_hsv=(0,0,0)), image
 
 
 def calculate_hsv(image: Image, surf: pygame.Surface|None = None):
@@ -145,7 +145,7 @@ def calculate_hsv(image: Image, surf: pygame.Surface|None = None):
         loaded = surf
     image.mean_hsv = get_image_hsv_mean(loaded)
     image.max_hsv = get_image_hsv_discrete(loaded, 360)
-    image.gauss_hsv = get_image_hsv_continuous(loaded)
+    # image.gauss_hsv = get_image_hsv_continuous(loaded)
     return image
 
 if __name__ == '__main__':
@@ -185,9 +185,9 @@ if __name__ == '__main__':
         for image in data:
             h_mean, s_mean, v_mean = image.mean_hsv
             h_max, s_max, v_max = image.max_hsv
-            h_gauss, s_gauss, v_gauss = image.gauss_hsv
-            csv_writer.writerow([image.name, image.width, image.height, h_mean, s_mean, v_mean, h_max, s_max, v_max, h_gauss, s_gauss, v_gauss])
-            # csv_writer.writerow([image.name, image.width, image.height, h_mean, s_mean, v_mean, h_max, s_max, v_max])
+            # h_gauss, s_gauss, v_gauss = image.gauss_hsv
+            # csv_writer.writerow([image.name, image.width, image.height, h_mean, s_mean, v_mean, h_max, s_max, v_max, h_gauss, s_gauss, v_gauss])
+            csv_writer.writerow([image.name, image.width, image.height, h_mean, s_mean, v_mean, h_max, s_max, v_max])
         
     pygame.quit()
 
