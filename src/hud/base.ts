@@ -21,6 +21,8 @@ const $loadingBar = $legend.querySelector(
     "#loading-bar",
 ) as HTMLProgressElement;
 const $loadingText = $legend.querySelector("#loading-text") as HTMLSpanElement;
+const $top = $hud.querySelector("#top") as HTMLButtonElement;
+const side = $hud.querySelector("#side") as HTMLButtonElement;
 const $mode = $hud.querySelectorAll(
     "input[name=mode]",
 ) as NodeListOf<HTMLInputElement>;
@@ -41,6 +43,12 @@ export function onDispChange<T = string>(callback: (disp: T) => void) {
             callback(input.value as T);
         }),
     );
+}
+export function onTopClick(callback: () => void) {
+    $top.addEventListener("click", callback);
+}
+export function onSideClick(callback: () => void) {
+    side.addEventListener("click", callback);
 }
 
 export function setLoading(

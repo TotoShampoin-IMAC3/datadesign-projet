@@ -12,6 +12,8 @@ import {
     setLoading,
     onModeChange,
     onDispChange,
+    onTopClick,
+    onSideClick,
     hideLoading,
     setExplain,
 } from "./hud/base";
@@ -117,6 +119,16 @@ onModeChange<Mode>((mode) => {
 onDispChange<Disp>((disp) => {
     currentDisp = disp;
     setExplain(disp);
+});
+onTopClick(() => {
+    camera.position.set(0, 100, 0);
+    camera.lookAt(0, 0, 0);
+    controls.update();
+});
+onSideClick(() => {
+    camera.position.set(0, 0, 100);
+    camera.lookAt(0, 0, 0);
+    controls.update();
 });
 
 const easing = BezierEasing(0.5, 0, 0.5, 1);
