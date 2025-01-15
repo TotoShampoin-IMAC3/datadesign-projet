@@ -2,6 +2,7 @@ import titleHtml from "./title.html?raw";
 import hudHtml from "./hud.html?raw";
 import legendHtml from "./legend.html?raw";
 import explainHtml from "./explain.html?raw";
+import cursorHtml from "./cursor.html?raw";
 
 const $title = document.createElement("div");
 $title.innerHTML = titleHtml;
@@ -16,6 +17,9 @@ const $explain = document.createElement("div");
 $explain.innerHTML = explainHtml;
 const $explainDiv = $explain.children[0] as HTMLDivElement;
 
+const $cursorDiv = document.createElement("div");
+$cursorDiv.innerHTML = cursorHtml;
+
 const $loadingBox = $legend.querySelector("#loading-box") as HTMLDivElement;
 const $loadingBar = $legend.querySelector(
     "#loading-bar",
@@ -29,6 +33,11 @@ const $mode = $hud.querySelectorAll(
 const $disp = $hud.querySelectorAll(
     "input[name=disp]",
 ) as NodeListOf<HTMLInputElement>;
+const $colored = $hud.querySelector("input[name=colored]") as HTMLInputElement;
+const $showCursor = $hud.querySelector(
+    "input[name=cursor]",
+) as HTMLInputElement;
+const $cursor = $cursorDiv.querySelector("#cursor") as HTMLDivElement;
 
 export function onModeChange<T = string>(callback: (mode: T) => void) {
     $mode.forEach((input) =>
@@ -43,6 +52,11 @@ export function onDispChange<T = string>(callback: (disp: T) => void) {
             callback(input.value as T);
         }),
     );
+}
+export function onColoredChange(callback: (colored: boolean) => void) {
+    $colored.addEventListener("change", () => {
+        callback($colored.checked);
+    });
 }
 export function onTopClick(callback: () => void) {
     $top.addEventListener("click", callback);
@@ -67,11 +81,20 @@ export function setExplain(mode: ExplainMode) {
     $explainDiv.dataset.mode = mode;
 }
 
+export function setCursorColor(color: string) {
+    $cursor.style.setProperty("--color", color);
+}
+
 export function setDomElement(element: HTMLElement) {
     element.appendChild($title.children[0]);
     element.appendChild($hud.children[0]);
     element.appendChild($legend.children[0]);
     element.appendChild($explain.children[0]);
+    element.appendChild($cursorDiv.children[0]);
+
+    $showCursor.addEventListener("change", () => {
+        $cursor.classList.toggle("hidden", !$showCursor.checked);
+    });
 
     const $toggle = document.querySelectorAll(
         ".toggle",

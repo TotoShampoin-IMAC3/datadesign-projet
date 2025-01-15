@@ -16,9 +16,11 @@ import {
     onSideClick,
     hideLoading,
     setExplain,
+    setCursorColor,
+    onColoredChange,
 } from "./hud/base";
 import { newQuad, Quad } from "./render/quad";
-import { delay, fetchJson, hsvToHsl } from "./utils";
+import { fetchJson, hsvToHsl } from "./utils";
 import BezierEasing from "bezier-easing";
 
 function lerp(a: number, b: number, t: number) {
@@ -37,7 +39,6 @@ camera.position.z = 50;
 camera.layers.enable(0);
 camera.layers.disable(1);
 
-// const NB_QUADS = 1000;
 const data = await fetchJson<
     {
         name: string;
@@ -65,10 +66,23 @@ function updateLoadingText() {
     }
 }
 
+const background = new THREE.Mesh(
+    new THREE.SphereGeometry(1000, 32, 32),
+    new THREE.MeshBasicMaterial({
+        color: 0x555555,
+        map: new THREE.TextureLoader().load("/rainbow360.png"),
+        side: THREE.BackSide,
+    }),
+);
+background.scale.set(1, -1, -1);
+background.layers.enable(0);
+background.layers.enable(1);
+
+scene.add(background);
+
 const quads: { data: Quad; hsv_mean: number[]; hsv_max: number[] }[] = [];
 
 // ===== Quads loading
-let i = 0;
 for (const d of data) {
     const { name, width, height } = d;
     const { h_max, s_max, v_max, h_mean, s_mean, v_mean } = d;
@@ -120,6 +134,9 @@ onDispChange<Disp>((disp) => {
     currentDisp = disp;
     setExplain(disp);
 });
+onColoredChange((colored) => {
+    background.visible = colored;
+});
 onTopClick(() => {
     camera.position.set(0, 100, 0);
     camera.lookAt(0, 0, 0);
@@ -137,6 +154,8 @@ let lastTime = 0;
 // ===== Rendering loop
 renderer.setAnimationLoop((time) => {
     const deltaTime = time - lastTime;
+
+    background.position.copy(camera.position);
 
     switch (currentDisp) {
         case "images":
@@ -161,13 +180,10 @@ renderer.setAnimationLoop((time) => {
         const vTo = modeTo === "mean" ? hsv_max[2] : hsv_mean[2];
         const rTo = modeTo === "mean" ? 20 : 30;
 
-        // const t = lerp(0, 1, lerpTimer);
-        // const t = smoothstep(0, 1, lerpTimer);
         const t = easing(lerpTimer);
         const h = lerp(hFrom, hTo, t);
         const s = lerp(sFrom, sTo, t);
         const v = lerp(vFrom, vTo, t);
-        // const v = lerp(vFrom, vTo, t) ** (1 / 2.2);
         const r = lerp(rFrom, rTo, t);
 
         const position = new THREE.Vector3(
@@ -188,14 +204,9 @@ renderer.setAnimationLoop((time) => {
 
     const pos = camera.position.clone().normalize();
     const [x, y, z] = pos.toArray();
-    const hsv = [(Math.atan2(z, x) / Math.PI / 2 + 1) % 1, (y + 1) / 2, 0.2];
-    let hsl = hsvToHsl(hsv[0], hsv[1], hsv[2]);
-
-    renderer.setClearColor(
-        new THREE.Color(
-            `hsl(${hsl[0] * 360}, ${hsl[1] * 100}%, ${hsl[2] * 100}%)`,
-        ),
-    );
+    const hsl = [(Math.atan2(z, x) / Math.PI / 2 + 1) % 1, 0.5, (y + 1) / 2];
+    setCursorColor(`hsl(${hsl[0] * 360}, ${hsl[1] * 100}%, ${hsl[2] * 100}%)`);
+    renderer.setClearColor(0x333333);
 
     renderer.render(scene, camera);
 

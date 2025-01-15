@@ -6,7 +6,7 @@ let domElement: HTMLElement;
 export const renderer = new THREE.WebGLRenderer();
 export const scene = new THREE.Scene();
 
-export const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+export const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1500);
 
 export const controls = new OrbitControls(camera, renderer.domElement);
 

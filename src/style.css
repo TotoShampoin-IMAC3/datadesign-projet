@@ -70,7 +70,8 @@ body {
 
     cursor: pointer;
 
-    input[type="radio"] {
+    input[type="radio"],
+    input[type="checkbox"] {
         display: none;
     }
     &::before {
@@ -118,7 +119,7 @@ button {
     top: 0.5rem;
     left: 0.5rem;
     padding: 0.5rem;
-    max-width: 53em;
+    max-width: 33em;
 
     background: var(--box-background);
     border-radius: 0.125rem;
@@ -190,6 +191,7 @@ button {
 }
 
 .explain {
+    max-width: 33em;
     position: fixed;
     bottom: 0.5rem;
     left: 0.5rem;
@@ -232,4 +234,27 @@ button.info {
 }
 .hidden {
     display: none;
+}
+
+.cursor {
+    position: absolute;
+    bottom: 20%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    background-color: var(--color, #000);
+    box-shadow: 0 0 0 0.5rem var(--box-background);
+
+    &.hidden {
+        display: none;
+    }
+}
+
+.lil-button {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.125rem;
+    background: var(--primary);
 }
