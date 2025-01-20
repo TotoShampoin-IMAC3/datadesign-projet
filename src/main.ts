@@ -20,7 +20,7 @@ import {
     onColoredChange,
 } from "./hud/base";
 import { newQuad, Quad } from "./render/quad";
-import { fetchJson, hsvToHsl } from "./utils";
+import { fetchJson } from "./utils";
 import BezierEasing from "bezier-easing";
 
 function lerp(a: number, b: number, t: number) {
