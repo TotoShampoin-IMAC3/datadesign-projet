@@ -153,6 +153,9 @@ if __name__ == '__main__':
 
     pygame.init()
 
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     # Remove existing files from output directory
     for file in os.listdir(output_dir):
         os.remove(output_dir + '/' + file)
