@@ -8,9 +8,8 @@ Ensuite, clonez le projet, avec les sous-modules:
 
 ```bash
 git clone https://github.com/TotoShampoin-IMAC3/datadesign-projet
-git submodule update --init --recursive
-
 cd datadesign-projet
+git submodule update --init --recursive
 ```
 
 Ensuite, mettez en place l'environnement Python en exécutant ce fichier:
